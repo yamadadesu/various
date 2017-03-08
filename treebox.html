@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title></title>
+</head>
+<body>
+<style type="text/css">
+.conteiner {
+    overflow-y: scroll;
+    width: 800px;
+    margin: 50px;
+}
+.box {
+    float: left;
+    overflow: hidden;
+    height: 400px;
+    width: 40%;
+    padding: 10px;
+    background: #444;
+}
+[class^="parent"] {
+    margin: 0 0 0 10px;
+}
+[class^="children"] {
+    float: right;
+    overflow: hidden;
+}
+.draggable_master,
+.droppable_master,
+.draggable_slave,
+.droppable_slave {
+    border: solid 1px;
+    margin: 5px 10px 10px 5px;
+    padding: 2px;
+}
+.draggable_slave,
+.draggable_master {
+    background: rgb(255, 255, 255);
+}
+.children_master,
+.children_slave {
+    width: 80%;
+    height: 100%;
+    text-align: right;
+    padding-left: 50px;
+}
+.ui-selecting{
+    border: dashed 1px #CCC;
+    background-color: #FEE
+}
+.ui-selected{
+    background-color: #FCC;
+}
+.ui-selectable-helper{
+    position: absolute; z-index: 100; border:1px dotted black;
+}
+
+</style>
+<div class="conteiner">
+    <div class="categories_block">
+        <div class="box droppable_master master">
+            <div class="parent_master draggable_master" data-slaveclass="super-1">Box-Component</div>
+            <div class="children_master selectable">
+                <div class="draggable_master" data-slaveclass="sub-1">Box-#1</div>
+                <div class="draggable_master" data-slaveclass="sub-2">Box-#2</div>
+                <div class="draggable_master" data-slaveclass="sub-3">Box-#3</div>
+            </div>
+        </div>
+        <div class="box droppable_slave slave">
+            <div class="parent_slave draggable_slave super-1" style="display: none;">Box-Component</div>
+            <div class="children_slave selectable">
+                <div class="draggable_slave sub-1" style="display: none;">Box-#1</div>
+                <div class="draggable_slave sub-2" style="display: none;">Box-#2</div>
+                <div class="draggable_slave sub-3" style="display: none;">Box-#3</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="hidden_form_elements"></div>
+
+<script
+  src="https://code.jquery.com/jquery-3.1.1.js"
+  integrity="sha256-16cdPddA6VdVInumRGo6IbivbERE8p7CQR3HzTBuELA="
+  crossorigin="anonymous">
+</script>
+<script
+  src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"
+  integrity="sha256-T0Vest3yCU7pafRw9r+settMBX6JkKN06dqBnpQ8d30="
+  crossorigin="anonymous">
+</script>
+<script type="text/javascript">
+
+jQuery(function() {
+
+    "use strict";
+
+    const $ = jQuery;
+
+    $(".selectable").selectable({});
+
+    // ドラッグ側設定
+    $(".draggable_master, .draggable_slave").draggable({
+        containment: ".conteiner",
+        revert: false,
+        helper: "clone",
+        start: function(event, ui) {
+        },
+        drag: function(event, ui){
+        },
+    });
+    // ドロップ側設定 - master
+    $(".droppable_master").droppable({
+        acccept: ".draggable_slave",
+        drop: (event, ui) => {
+            let $this = ui.draggable;
+
+            // master=>master slave=>slaveへのドロップは何もしない
+            if(!$this.hasClass("draggable_slave")) {
+                return;
+            }
+
+            droppable.action($this);
+            $this.parents(".box").children("div").each(function(index, el) {
+                if($(this).hasClass("children_slave")) {
+                    $(this).children("div").each(function(index, el) {
+                        if($(this).hasClass("ui-selected")) {
+                            droppable.action($(this));
+                        }
+                    });
+                } else {
+                    if($(this).hasClass("ui-selected")) {
+                        droppable.action($(this));
+                    }
+                }
+            });
+        },
+    });
+
+    // ドロップ側設定 - slave
+    $(".droppable_slave").droppable({
+        acccept: ".draggable_master",
+        drop: (event, ui) => {
+            let $this = ui.draggable;
+
+            // master=>master slave=>slaveへのドロップは何もしない
+            if(!$this.hasClass("draggable_master")) {
+                return;
+            }
+
+            droppable.action($this);
+            $this.parents(".box").children("div").each(function(index, el) {
+                if($(this).hasClass("children_master")) {
+                    $(this).children("div").each(function(index, el) {
+                        if($(this).hasClass("ui-selected")) {
+                            droppable.action($(this));
+                        }
+                    });
+                } else {
+                    if($(this).hasClass("ui-selected")) {
+                        droppable.action($(this));
+                    }
+                }
+            });
+        },
+    });
+
+    const droppable = {
+        action : ($this) => {
+            if($this.parents(".box").hasClass("slave")) {
+                droppable.remove($this);
+            } else {
+                droppable.add($this);
+            }
+        },
+        // masterからslaveへの要素追加
+        add : ($this) => {
+            let slaveClass = $this.attr("data-slaveclass");
+            // カテゴリをドラッグアンドドロップ
+            $("." + slaveClass).fadeIn("slow");
+            if(slaveClass.match(/super/)) {
+                let slave = $this.parents(".categories_block").find(".children_slave");
+                slave.children('div').each(function(index, el) {
+                    $(this).fadeIn("slow");
+                });
+            // サブカテゴリをドラッグアンドドロップ
+            } else if(slaveClass.match(/sub/)) {
+                let slaveClassp = $this.parents(".box").find(".parent_master").attr("data-slaveclass");
+                $("." + slaveClassp).fadeIn("slow");
+            }
+
+        },
+        // slaveの要素削除
+        remove: ($this) => {
+            let slaveClass = $this.attr("class");
+            // カテゴリをドラッグアンドドロップ
+            if(slaveClass.match(/super/)) {
+                $this.hide();
+                // 親要素が消えたら子要素も全て消える
+                let slave = $this.parents(".categories_block").find(".children_slave");
+                slave.children('div').each(function(index, el) {
+                    $(this).hide();
+                });
+            // サブカテゴリをドラッグアンドドロップ
+            } else if(slaveClass.match(/sub/)) {
+                $this.hide();
+                // 表示されている子要素がなければ親要素も消える
+                let cnt = 0;
+                $this.siblings().each(function(index, el) {
+                    if ($(this).is(':visible')) {
+                        console.info($(this));
+                        cnt = cnt + 1;
+                    }
+                });
+                // clone元の要素が一つは必ず表示されているので2以下の場合
+                if(cnt < 2) {
+                    $this.parents(".box").find(".parent_slave").hide();
+                }
+            }
+        }
+    }
+});
+</script>
+
+</body>
+</html>
